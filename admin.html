@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Leave Dashboard | Barsoi Public School</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --secondary: #2563eb;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+    }
+    * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
+    body { background: var(--bg-gradient); color: var(--text-main); min-height: 100vh; padding: 20px; }
+    
+    .container { max-width: 1000px; margin: 0 auto; background: var(--card-bg); border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid var(--border-color); }
+    .header { background: #1e3a8a; color: white; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 18px; font-weight: 800; text-transform: uppercase; }
+    
+    .content { padding: 20px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 700px; }
+    th { background: #f1f5f9; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); padding: 12px; text-align: left; }
+    td { padding: 12px; font-size: 13px; border-bottom: 1px solid #f1f5f9; font-weight: 500; }
+
+    .btn-approve { background: var(--success); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 12px; }
+    .btn-reject { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 12px; margin-left: 4px; }
+    
+    .badge-approved { color: var(--success); font-weight: 700; background: #f0fdf4; padding: 4px 8px; border-radius: 6px; }
+    .badge-rejected { color: var(--danger); font-weight: 700; background: #fef2f2; padding: 4px 8px; border-radius: 6px; }
+    .badge-pending { color: #d97706; font-weight: 700; background: #fffbeb; padding: 4px 8px; border-radius: 6px; }
+
+    .remark-text { font-size: 11px; color: #64748b; margin-top: 4px; font-style: italic; }
+  </style>
+</head>
+<body onload="initDashboard()">
+
+<div class="container">
+  <div class="header">
+    <h1>Leave Requests Management</h1>
+    <button onclick="loadLeaveRequests(true)" style="background:rgba(255,255,255,0.2); border:none; color:white; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600;">Refresh</button>
+  </div>
+
+  <div class="content">
+    <table>
+      <thead>
+        <tr>
+          <th>Student Details</th>
+          <th>Dates</th>
+          <th>Reason & Remark</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="leaveTableBody">
+        <tr><td colspan="5" style="text-align: center; color: #64748b;">Loading applications...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxP0hgnV4f1Gjlwrp5X6NoPQJc1Eb6OlcIbRM1FaFPcDYHwnJmK5oAsXCGnryx3HVN3/exec";
+
+  // Date Formatting Helper Function (Convert to DD/MM/YYYY)
+  function formatDateDDMMYYYY(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr; // Agar already clear string hai toh direct return
+    
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    
+    return `${day}/${month}/${year}`;
+  }
+
+  function initDashboard() {
+    const cachedLeaves = localStorage.getItem("cached_leaves");
+    if (cachedLeaves) {
+      renderTable(JSON.parse(cachedLeaves));
+    }
+    loadLeaveRequests(false);
+  }
+
+  function loadLeaveRequests(showLoader = false) {
+    const tbody = document.getElementById("leaveTableBody");
+    if (showLoader || !localStorage.getItem("cached_leaves")) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b;">Loading applications...</td></tr>`;
+    }
+
+    fetch(`${SCRIPT_URL}?action=getLeaves&_t=${new Date().getTime()}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success" && data.leaves) {
+          localStorage.setItem("cached_leaves", JSON.stringify(data.leaves));
+          renderTable(data.leaves);
+        } else {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b;">Koi application nahi hai.</td></tr>`;
+        }
+      })
+      .catch(err => {
+        if (!localStorage.getItem("cached_leaves")) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Failed to load data.</td></tr>`;
+        }
+      });
+  }
+
+  function renderTable(leaves) {
+    const tbody = document.getElementById("leaveTableBody");
+    tbody.innerHTML = "";
+
+    if (leaves.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b;">Koi application nahi hai.</td></tr>`;
+      return;
+    }
+
+    leaves.forEach((item) => {
+      let tr = document.createElement("tr");
+      let currentStatus = item.status || 'Pending';
+      let statusBadge = `<span class="badge-${currentStatus.toLowerCase()}">${currentStatus}</span>`;
+      
+      let actionBtns = (currentStatus === 'Pending') ? `
+        <button class="btn-approve" onclick="updateStatus(${item.rowIndex}, 'Approved')">Approve</button>
+        <button class="btn-reject" onclick="updateStatus(${item.rowIndex}, 'Rejected')">Reject</button>
+      ` : `<small style="color:#64748b; font-weight:600;">Done</small>`;
+
+      let remarkHtml = item.remark ? `<div class="remark-text"><b>Admin Note:</b> ${item.remark}</div>` : '';
+
+      // Clean DD/MM/YYYY dates
+      let formattedFrom = formatDateDDMMYYYY(item.fromDate);
+      let formattedTo = formatDateDDMMYYYY(item.toDate);
+
+      tr.innerHTML = `
+        <td><b>${item.studentName}</b><br><small style="color:#64748b">Class: ${item.className} | Roll: ${item.rollNo}</small></td>
+        <td><b>${formattedFrom}</b> to <b>${formattedTo}</b></td>
+        <td><b>Reason:</b> ${item.reason}${remarkHtml}</td>
+        <td>${statusBadge}</td>
+        <td>${actionBtns}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updateStatus(rowIdx, newStatus) {
+    Swal.fire({
+      title: `${newStatus} Application`,
+      text: `Reason / Remark add karein (Optional):`,
+      input: 'text',
+      inputPlaceholder: newStatus === 'Approved' ? 'e.g. Approved by Principal' : 'e.g. Valid certificate required',
+      showCancelButton: true,
+      confirmButtonText: 'Confirm',
+      confirmButtonColor: newStatus === 'Approved' ? '#16a34a' : '#dc2626',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const adminRemark = result.value || '';
+
+        Swal.fire({ title: 'Updating...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+        const params = new URLSearchParams({
+          action: "updateLeaveStatus",
+          rowIndex: rowIdx,
+          status: newStatus,
+          remark: adminRemark,
+          _t: new Date().getTime()
+        });
+
+        fetch(`${SCRIPT_URL}?${params.toString()}`)
+          .then(res => res.json())
+          .then(data => {
+            Swal.close();
+            if (data.status === "success") {
+              Swal.fire('Updated!', `Application status set to ${newStatus}.`, 'success');
+              loadLeaveRequests(false);
+            } else {
+              Swal.fire('Error', 'Update nahi ho paya.', 'error');
+            }
+          })
+          .catch(err => {
+            Swal.close();
+            Swal.fire('Error', 'Server error!', 'error');
+          });
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
