@@ -152,6 +152,17 @@
 <script>
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxP0hgnV4f1Gjlwrp5X6NoPQJc1Eb6OlcIbRM1FaFPcDYHwnJmK5oAsXCGnryx3HVN3/exec";
 
+  // Helper Function for DD/MM/YYYY
+  function formatDateDDMMYYYY(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
   function submitLeave() {
     const className = document.getElementById("className").value.trim();
     const rollNo = document.getElementById("rollNo").value.trim();
@@ -228,10 +239,16 @@
           if (data.leaveStatus === 'Approved') statusColor = '#16a34a';
           if (data.leaveStatus === 'Rejected') statusColor = '#dc2626';
 
+          let formattedFrom = formatDateDDMMYYYY(data.fromDate);
+          let formattedTo = formatDateDDMMYYYY(data.toDate);
+
+          // Admin Remark Section (Agar admin ne koi note/remark likha ho)
+          let remarkHtml = data.remark ? `<br><b>Admin Remark:</b> <span style="color:#2563eb;">${data.remark}</span>` : '';
+
           Swal.fire({
             title: 'Application Status',
             html: `<b>Status:</b> <span style="color:${statusColor}; font-size:16px;">${data.leaveStatus}</span><br><br>
-                   <small><b>Dates:</b> ${data.fromDate} to ${data.toDate}<br><b>Reason:</b> ${data.reason}</small>`,
+                   <small><b>Dates:</b> ${formattedFrom} to ${formattedTo}<br><b>Reason:</b> ${data.reason}${remarkHtml}</small>`,
             icon: data.leaveStatus === 'Approved' ? 'success' : (data.leaveStatus === 'Rejected' ? 'error' : 'info')
           });
         } else {
