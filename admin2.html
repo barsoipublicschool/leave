@@ -2,7 +2,6 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
-  <!-- WebView Desktop Mode Viewport -->
   <meta name="viewport" content="width=1050, initial-scale=0.35, maximum-scale=3.0, user-scalable=yes">
   <title>Admin Leave Dashboard | Barsoi Public School</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -118,23 +117,24 @@
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz1TSEiT0v18_nC1VlIYamra-nGcXWfTeN_A2IM6VcbBBAJhkt1GdodMrG2Wl6Rx3P1/exec";
   let globalLeavesData = [];
 
-  // Safe WhatsApp Launcher function to prevent White Screen in Android WebView
-  function openWhatsApp(mobileNo, textMessage) {
+  // Direct Bypass Click Trigger for Strict WebView
+  function triggerDirectWhatsApp(mobileNo, textMessage) {
     let parentMobile = mobileNo ? mobileNo.toString().replace(/[^0-9]/g, '') : '';
     if(parentMobile.length === 10) parentMobile = "91" + parentMobile;
-    
+
     let encodedText = encodeURIComponent(textMessage);
-    let intentUrl = `intent://send?phone=${parentMobile}&text=${encodedText}#Intent;scheme=whatsapp;package=com.whatsapp;end`;
+    
+    // Fallback Scheme URLs
+    let waUrl = `https://api.whatsapp.com/send?phone=${parentMobile}&text=${encodedText}`;
 
-    // Try iframe dispatch (Prevents WebView navigation crash)
-    let iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = intentUrl;
-    document.body.appendChild(iframe);
-
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 1000);
+    // Dynamic Element Injection & MouseClick simulation
+    let a = document.createElement('a');
+    a.href = waUrl;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   function formatDateDDMMYYYY(dateStr) {
@@ -228,7 +228,7 @@
         <button class="btn-approve" onclick="updateStatus(${item.rowIndex}, 'Approved', '${item.studentName}', '${formattedFrom}', '${formattedTo}', '${item.mobileNo}')">Approve</button>
         <button class="btn-reject" onclick="updateStatus(${item.rowIndex}, 'Rejected', '${item.studentName}', '${formattedFrom}', '${formattedTo}', '${item.mobileNo}')">Reject</button>
       ` : `
-        <button onclick="openWhatsApp('${item.mobileNo}', \`${rawMessage}\`)" class="btn-whatsapp">📲 Send WA Alert</button>
+        <button onclick="triggerDirectWhatsApp('${item.mobileNo}', \`${rawMessage}\`)" class="btn-whatsapp">📲 Send WA Alert</button>
       `;
 
       let remarkHtml = item.remark ? `<div class="remark-text"><b>Admin Note:</b> ${item.remark}</div>` : '';
@@ -291,7 +291,7 @@
                 cancelButtonText: 'Close'
               }).then((waRes) => {
                 if(waRes.isConfirmed && parentMobile) {
-                  openWhatsApp(parentMobile, rawMessage);
+                  triggerDirectWhatsApp(parentMobile, rawMessage);
                 }
                 loadLeaveRequests(false);
               });
