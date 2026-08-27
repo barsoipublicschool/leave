@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,6 +66,14 @@
     input:focus, textarea:focus { border-color: var(--secondary); background: #fff; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
     textarea { resize: none; height: 80px; }
 
+    /* Student Stats Box */
+    .stats-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 16px; display: none; }
+    .stats-box h4 { font-size: 11px; text-transform: uppercase; color: #64748b; margin-bottom: 8px; text-align: center; font-weight: 800; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
+    .stat-item { background: white; padding: 8px 4px; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .stat-item span { display: block; font-size: 16px; font-weight: 800; }
+    .stat-item p { font-size: 9px; font-weight: 700; color: #64748b; margin-top: 2px; }
+
     .btn-submit {
       width: 100%;
       padding: 14px;
@@ -114,11 +122,30 @@
     <div class="form-grid">
       <div class="form-group">
         <label>Class Name</label>
-        <input type="text" id="className" placeholder="e.g. 8th">
+        <input type="text" id="className" placeholder="e.g. 8th" oninput="fetchStudentStats()">
       </div>
       <div class="form-group">
         <label>Roll Number</label>
-        <input type="text" id="rollNo" placeholder="e.g. 24">
+        <input type="text" id="rollNo" placeholder="e.g. 24" oninput="fetchStudentStats()">
+      </div>
+    </div>
+
+    <!-- Live Yearly Leave Summary Box -->
+    <div id="statsBox" class="stats-box">
+      <h4>📊 Academic Leave Record Summary</h4>
+      <div class="stats-grid">
+        <div class="stat-item" style="border-bottom: 3px solid #16a34a;">
+          <span id="stApproved" style="color: #16a34a;">0</span>
+          <p>APPROVED</p>
+        </div>
+        <div class="stat-item" style="border-bottom: 3px solid #dc2626;">
+          <span id="stRejected" style="color: #dc2626;">0</span>
+          <p>REJECTED</p>
+        </div>
+        <div class="stat-item" style="border-bottom: 3px solid #d97706;">
+          <span id="stPending" style="color: #d97706;">0</span>
+          <p>PENDING</p>
+        </div>
       </div>
     </div>
 
@@ -140,7 +167,7 @@
 
     <div class="form-group">
       <label>Reason for Leave</label>
-      <textarea id="reason" placeholder="Karan likhein (e.g. Tabiyat kharab hai)..."></textarea>
+      <textarea id="reason" placeholder="State reason for leave..."></textarea>
     </div>
 
     <button class="btn-submit" onclick="submitLeave()">Submit Application</button>
@@ -150,9 +177,8 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxP0hgnV4f1Gjlwrp5X6NoPQJc1Eb6OlcIbRM1FaFPcDYHwnJmK5oAsXCGnryx3HVN3/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz1TSEiT0v18_nC1VlIYamra-nGcXWfTeN_A2IM6VcbBBAJhkt1GdodMrG2Wl6Rx3P1/exec";
 
-  // Helper Function for DD/MM/YYYY
   function formatDateDDMMYYYY(dateStr) {
     if (!dateStr) return "";
     const d = new Date(dateStr);
@@ -161,6 +187,33 @@
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
+  }
+
+  let statsTimer;
+  function fetchStudentStats() {
+    clearTimeout(statsTimer);
+    const cls = document.getElementById("className").value.trim();
+    const roll = document.getElementById("rollNo").value.trim();
+    const statsBox = document.getElementById("statsBox");
+
+    if (!cls || !roll) {
+      statsBox.style.display = "none";
+      return;
+    }
+
+    statsTimer = setTimeout(() => {
+      fetch(`${SCRIPT_URL}?action=getStudentStats&className=${encodeURIComponent(cls)}&rollNo=${encodeURIComponent(roll)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "success" && data.stats) {
+            document.getElementById("stApproved").innerText = data.stats.approved;
+            document.getElementById("stRejected").innerText = data.stats.rejected;
+            document.getElementById("stPending").innerText = data.stats.pending;
+            statsBox.style.display = "block";
+          }
+        })
+        .catch(err => console.log("Error fetching stats:", err));
+    }, 400);
   }
 
   function submitLeave() {
@@ -172,11 +225,11 @@
     const reason = document.getElementById("reason").value.trim();
 
     if (!className || !rollNo || !studentName || !fromDate || !toDate || !reason) {
-      Swal.fire('Adhoori Jankari', 'Kripya sabhi fields bharein!', 'warning');
+      Swal.fire('Incomplete Details', 'Please fill in all mandatory fields.', 'warning');
       return;
     }
 
-    Swal.fire({ title: 'Submitting...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    Swal.fire({ title: 'Submitting Application...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
     const params = new URLSearchParams({
       action: "applyLeave",
@@ -193,35 +246,35 @@
       .then(data => {
         Swal.close();
         if (data.status === "success") {
-          Swal.fire('Success!', 'Leave application safalpurvak bhej di gayi hai.', 'success');
+          Swal.fire('Submitted!', 'Your leave application has been submitted successfully.', 'success');
           document.getElementById("className").value = "";
           document.getElementById("rollNo").value = "";
           document.getElementById("studentName").value = "";
           document.getElementById("fromDate").value = "";
           document.getElementById("toDate").value = "";
           document.getElementById("reason").value = "";
+          document.getElementById("statsBox").style.display = "none";
         } else {
-          Swal.fire('Error', 'Kuch gadbadi ho gayi.', 'error');
+          Swal.fire('Submission Failed', 'An error occurred while submitting your application.', 'error');
         }
       })
       .catch(err => {
         Swal.close();
-        Swal.fire('Error', 'Server connection failed!', 'error');
+        Swal.fire('Server Error', 'Unable to connect to the server.', 'error');
       });
   }
 
-  // Student Status Check Function
   function checkLeaveStatus() {
     const className = document.getElementById("className").value.trim();
     const rollNo = document.getElementById("rollNo").value.trim();
     const studentName = document.getElementById("studentName").value.trim();
 
     if (!className || !rollNo || !studentName) {
-      Swal.fire('Jankari Chahiye', 'Status check karne ke liye Class, Roll No aur Student Name bharein!', 'info');
+      Swal.fire('Missing Information', 'Please enter Class Name, Roll Number, and Student Name to check status.', 'info');
       return;
     }
 
-    Swal.fire({ title: 'Checking status...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    Swal.fire({ title: 'Checking Application Status...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
     const params = new URLSearchParams({
       action: "checkStatus",
@@ -235,14 +288,13 @@
       .then(data => {
         Swal.close();
         if (data.status === "success") {
-          let statusColor = '#d97706'; // Pending
+          let statusColor = '#d97706';
           if (data.leaveStatus === 'Approved') statusColor = '#16a34a';
           if (data.leaveStatus === 'Rejected') statusColor = '#dc2626';
 
           let formattedFrom = formatDateDDMMYYYY(data.fromDate);
           let formattedTo = formatDateDDMMYYYY(data.toDate);
 
-          // Admin Remark Section (Agar admin ne koi note/remark likha ho)
           let remarkHtml = data.remark ? `<br><b>Admin Remark:</b> <span style="color:#2563eb;">${data.remark}</span>` : '';
 
           Swal.fire({
@@ -252,12 +304,12 @@
             icon: data.leaveStatus === 'Approved' ? 'success' : (data.leaveStatus === 'Rejected' ? 'error' : 'info')
           });
         } else {
-          Swal.fire('Not Found', 'Aapki koi leave application nahi mili. Kripya details check karein.', 'warning');
+          Swal.fire('Record Not Found', 'No leave application found matching these details.', 'warning');
         }
       })
       .catch(err => {
         Swal.close();
-        Swal.fire('Error', 'Server connection failed!', 'error');
+        Swal.fire('Server Error', 'Unable to connect to the server.', 'error');
       });
   }
 </script>
