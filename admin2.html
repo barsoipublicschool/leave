@@ -2,7 +2,8 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- WebView Desktop Mode Viewport -->
+  <meta name="viewport" content="width=1050, initial-scale=0.35, maximum-scale=3.0, user-scalable=yes">
   <title>Admin Leave Dashboard | Barsoi Public School</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -20,7 +21,16 @@
       --border-color: #e2e8f0;
     }
     * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
-    body { background: var(--bg-gradient); color: var(--text-main); min-height: 100vh; padding: 20px; }
+    
+    /* Fixed Desktop Body Width */
+    body { 
+      background: var(--bg-gradient); 
+      color: var(--text-main); 
+      min-height: 100vh; 
+      padding: 20px; 
+      width: 1050px; 
+      min-width: 1050px; 
+    }
     
     .container { max-width: 1050px; margin: 0 auto; background: var(--card-bg); border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid var(--border-color); }
     .header { background: #1e3a8a; color: white; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
@@ -198,13 +208,15 @@
       if(parentMobile.length === 10) parentMobile = "91" + parentMobile;
 
       let waText = encodeURIComponent(`*Barsoi Public School - Leave Notification*\n\nDear Parent,\nStudent: *${item.studentName}* (Class: ${item.className}, Roll: ${item.rollNo})\nLeave Dates: *${formattedFrom} to ${formattedTo}*\nStatus: *${currentStatus.toUpperCase()}*\nRemark: ${item.remark || 'N/A'}\n\nThank you.`);
-      let waLink = `https://api.whatsapp.com/send?phone=${parentMobile}&text=${waText}`;
+      
+      // Android Native Intent scheme implementation for direct app launch
+      let waLink = `intent://send?phone=${parentMobile}&text=${waText}#Intent;scheme=whatsapp;package=com.whatsapp;end`;
 
       let actionBtns = (currentStatus === 'Pending') ? `
         <button class="btn-approve" onclick="updateStatus(${item.rowIndex}, 'Approved', '${item.studentName}', '${formattedFrom}', '${formattedTo}', '${parentMobile}')">Approve</button>
         <button class="btn-reject" onclick="updateStatus(${item.rowIndex}, 'Rejected', '${item.studentName}', '${formattedFrom}', '${formattedTo}', '${parentMobile}')">Reject</button>
       ` : `
-        <a href="${waLink}" target="_blank" class="btn-whatsapp">📲 Send WA Alert</a>
+        <a href="${waLink}" class="btn-whatsapp">📲 Send WA Alert</a>
       `;
 
       let remarkHtml = item.remark ? `<div class="remark-text"><b>Admin Note:</b> ${item.remark}</div>` : '';
@@ -258,7 +270,9 @@
             Swal.close();
             if (data.status === "success") {
               let waText = encodeURIComponent(`*Barsoi Public School - Leave Status*\n\nDear Parent,\nStudent: *${studentName}*\nDates: *${fromDate} to ${toDate}*\nStatus: *${newStatus.toUpperCase()}*\nRemark: ${adminRemark || 'N/A'}\n\nThank you.`);
-              let waUrl = `https://wa.me/${parentMobile}?text=${waText}`;
+              
+              // Android Native Intent scheme for SweetAlert popup
+              let waUrl = `intent://send?phone=${parentMobile}&text=${waText}#Intent;scheme=whatsapp;package=com.whatsapp;end`;
 
               Swal.fire({
                 title: 'Updated Successfully!',
@@ -269,7 +283,7 @@
                 cancelButtonText: 'Close'
               }).then((waRes) => {
                 if(waRes.isConfirmed && parentMobile) {
-                  window.open(waUrl, '_blank');
+                  window.location.href = waUrl;
                 }
                 loadLeaveRequests(false);
               });
