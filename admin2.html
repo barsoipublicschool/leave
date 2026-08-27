@@ -49,6 +49,9 @@
     .badge-approved { color: var(--success); font-weight: 700; background: #f0fdf4; padding: 4px 8px; border-radius: 6px; }
     .badge-rejected { color: var(--danger); font-weight: 700; background: #fef2f2; padding: 4px 8px; border-radius: 6px; }
     .badge-pending { color: var(--warning); font-weight: 700; background: #fffbeb; padding: 4px 8px; border-radius: 6px; }
+    
+    /* Warning Badge for Excessive Leaves */
+    .badge-warning-leave { color: #b91c1c; font-weight: 800; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block; margin-top: 3px; border: 1px solid #fca5a5; }
 
     .remark-text { font-size: 11px; color: #64748b; margin-top: 4px; font-style: italic; }
   </style>
@@ -64,7 +67,6 @@
     </div>
   </div>
 
-  <!-- Real-Time Analytics Cards -->
   <div class="analytics-grid">
     <div class="stat-card" style="border-top: 4px solid var(--primary);">
       <p>Total Applications</p>
@@ -104,7 +106,7 @@
 
 <script>
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxP0hgnV4f1Gjlwrp5X6NoPQJc1Eb6OlcIbRM1FaFPcDYHwnJmK5oAsXCGnryx3HVN3/exec";
-  let globalLeavesData = []; // Excel export ke liye store karenge
+  let globalLeavesData = [];
 
   function formatDateDDMMYYYY(dateStr) {
     if (!dateStr) return "";
@@ -151,12 +153,9 @@
       });
   }
 
-  // Real-Time Analytics Counter Function
   function updateAnalytics(leaves) {
     let total = leaves.length;
-    let pending = 0;
-    let approved = 0;
-    let rejected = 0;
+    let pending = 0, approved = 0, rejected = 0;
 
     leaves.forEach(item => {
       let st = (item.status || 'Pending').toLowerCase();
@@ -179,6 +178,13 @@
       tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b;">Koi application nahi hai.</td></tr>`;
       return;
     }
+
+    // Student Count Frequency Calculation
+    let studentFreq = {};
+    leaves.forEach(item => {
+      let key = `${item.className}_${item.rollNo}_${item.studentName}`.toLowerCase();
+      studentFreq[key] = (studentFreq[key] || 0) + 1;
+    });
 
     leaves.forEach((item) => {
       let tr = document.createElement("tr");
@@ -203,8 +209,17 @@
 
       let remarkHtml = item.remark ? `<div class="remark-text"><b>Admin Note:</b> ${item.remark}</div>` : '';
 
+      // Check Frequent Leave Warning (If count > 1)
+      let studentKey = `${item.className}_${item.rollNo}_${item.studentName}`.toLowerCase();
+      let leaveCount = studentFreq[studentKey] || 1;
+      let warningBadge = leaveCount > 1 ? `<br><span class="badge-warning-leave">⚠️ Frequent Leave (${leaveCount} Total)</span>` : '';
+
       tr.innerHTML = `
-        <td><b>${item.studentName}</b><br><small style="color:#64748b">Class: ${item.className} | Roll: ${item.rollNo}</small><br><small style="color:#2563eb;">📱 ${item.mobileNo || 'N/A'}</small></td>
+        <td>
+          <b>${item.studentName}</b> ${warningBadge}<br>
+          <small style="color:#64748b">Class: ${item.className} | Roll: ${item.rollNo}</small><br>
+          <small style="color:#2563eb;">📱 ${item.mobileNo || 'N/A'}</small>
+        </td>
         <td><b>${formattedFrom}</b> to <b>${formattedTo}</b></td>
         <td><b>Reason:</b> ${item.reason}${remarkHtml}</td>
         <td>${statusBadge}</td>
@@ -270,7 +285,6 @@
     });
   }
 
-  // One-Click Excel CSV Export Function
   function exportToExcel() {
     if (globalLeavesData.length === 0) {
       Swal.fire('No Data', 'Export karne ke liye koi data nahi hai.', 'info');
