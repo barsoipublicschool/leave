@@ -198,7 +198,7 @@
       if(parentMobile.length === 10) parentMobile = "91" + parentMobile;
 
       let waText = encodeURIComponent(`*Barsoi Public School - Leave Notification*\n\nDear Parent,\nStudent: *${item.studentName}* (Class: ${item.className}, Roll: ${item.rollNo})\nLeave Dates: *${formattedFrom} to ${formattedTo}*\nStatus: *${currentStatus.toUpperCase()}*\nRemark: ${item.remark || 'N/A'}\n\nThank you.`);
-      let waLink = `https://wa.me/${parentMobile}?text=${waText}`;
+      let waLink = `https://api.whatsapp.com/send?phone=${parentMobile}&text=${waText}`;
 
       let actionBtns = (currentStatus === 'Pending') ? `
         <button class="btn-approve" onclick="updateStatus(${item.rowIndex}, 'Approved', '${item.studentName}', '${formattedFrom}', '${formattedTo}', '${parentMobile}')">Approve</button>
